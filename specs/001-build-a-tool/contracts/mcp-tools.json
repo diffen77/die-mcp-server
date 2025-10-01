@@ -1,0 +1,169 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "MCP Tool Definitions",
+  "description": "Model Context Protocol tool schemas for webpage analyzer",
+  "tools": [
+    {
+      "name": "analyzeWebpage",
+      "description": "Analyzes a complete webpage and generates production-ready component code",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https?://",
+            "description": "The webpage URL to analyze",
+            "examples": ["https://example.com", "https://stripe.com/pricing"]
+          },
+          "framework": {
+            "type": "string",
+            "enum": ["react", "angular", "vue", "svelte"],
+            "description": "Target framework for generated component"
+          },
+          "styling": {
+            "type": "string",
+            "enum": ["tailwind", "css", "scss", "styled-components"],
+            "description": "Styling approach for the component"
+          },
+          "options": {
+            "type": "object",
+            "properties": {
+              "typescript": {
+                "type": "boolean",
+                "default": true,
+                "description": "Include TypeScript type definitions"
+              },
+              "responsive": {
+                "type": "boolean",
+                "default": true,
+                "description": "Generate mobile-first responsive design"
+              },
+              "accessibility": {
+                "type": "boolean",
+                "default": true,
+                "description": "Include ARIA labels and semantic HTML"
+              }
+            }
+          }
+        },
+        "required": ["url", "framework", "styling"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "success": {
+                "type": "boolean",
+                "const": true
+              },
+              "component": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "description": "Generated component code"
+                  },
+                  "imports": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Required import statements"
+                  },
+                  "dependencies": {
+                    "type": "object",
+                    "additionalProperties": { "type": "string" },
+                    "description": "NPM dependencies with versions"
+                  },
+                  "filename": {
+                    "type": "string",
+                    "pattern": "\\.(tsx?|jsx?|vue|svelte)$",
+                    "description": "Suggested filename with extension"
+                  },
+                  "instructions": {
+                    "type": "string",
+                    "description": "Usage instructions for the component"
+                  }
+                },
+                "required": ["code", "imports", "dependencies", "filename"]
+              },
+              "analysis": {
+                "type": "object",
+                "properties": {
+                  "url": { "type": "string", "format": "uri" },
+                  "timestamp": { "type": "string", "format": "date-time" },
+                  "domElements": { "type": "integer", "minimum": 0 },
+                  "colors": {
+                    "type": "array",
+                    "items": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" }
+                  },
+                  "fonts": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "processingTime": { "type": "number", "minimum": 0 }
+                },
+                "required": ["url", "timestamp", "domElements", "processingTime"]
+              }
+            },
+            "required": ["success", "component", "analysis"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "success": {
+                "type": "boolean",
+                "const": false
+              },
+              "error": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "enum": [
+                      "INVALID_URL",
+                      "UNREACHABLE_URL",
+                      "TIMEOUT",
+                      "DOM_TOO_LARGE",
+                      "RESOURCE_TOO_LARGE",
+                      "UNSUPPORTED_FRAMEWORK",
+                      "UNSUPPORTED_STYLING",
+                      "AI_MODEL_ERROR",
+                      "TEMPLATE_ERROR",
+                      "VALIDATION_ERROR",
+                      "RATE_LIMITED",
+                      "INTERNAL_ERROR"
+                    ]
+                  },
+                  "message": { "type": "string" },
+                  "details": { "type": "object" },
+                  "suggestion": { "type": "string" }
+                },
+                "required": ["code", "message"]
+              }
+            },
+            "required": ["success", "error"]
+          }
+        ]
+      }
+    }
+  ],
+  "transport": {
+    "type": "sse",
+    "endpoint": "/sse",
+    "contentType": "text/event-stream",
+    "keepAlive": 30000,
+    "reconnect": true
+  },
+  "server": {
+    "name": "die-mcp-server",
+    "version": "1.0.0",
+    "capabilities": {
+      "tools": true,
+      "resources": false,
+      "prompts": false,
+      "sampling": false
+    }
+  }
+}

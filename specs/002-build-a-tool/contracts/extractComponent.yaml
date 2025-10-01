@@ -1,0 +1,257 @@
+# MCP Tool Contract: extractComponent
+# Version: 1.0.0
+# Specification: Model Context Protocol v0.5.0+
+
+openapi: 3.0.0
+info:
+  title: Extract Component Tool
+  version: 1.0.0
+  description: MCP tool for extracting and recreating webpage components
+
+paths:
+  /tools/extractComponent:
+    post:
+      summary: Extract and recreate a component from a webpage
+      operationId: extractComponent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExtractComponentRequest'
+      responses:
+        '200':
+          description: Component successfully extracted and generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtractComponentResponse'
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Component not found on page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Page requires authentication
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '504':
+          description: Timeout loading page or analyzing component
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    ExtractComponentRequest:
+      type: object
+      required:
+        - url
+        - identifier
+        - framework
+      properties:
+        url:
+          type: string
+          format: uri
+          pattern: '^https?://'
+          description: URL of the webpage to extract from
+          example: "https://example.com"
+        identifier:
+          type: object
+          required:
+            - type
+            - value
+          properties:
+            type:
+              type: string
+              enum: [selector, semantic]
+              description: How to identify the component
+            value:
+              type: string
+              description: CSS selector or semantic description
+              example: ".pricing-table"
+        framework:
+          type: string
+          enum: [react, vue]
+          description: Target framework for generated code
+        styling:
+          type: string
+          enum: [css, scss, css-in-js]
+          default: css
+          description: Preferred styling format
+        timeout:
+          type: integer
+          minimum: 1000
+          maximum: 60000
+          default: 30000
+          description: Page load timeout in milliseconds
+        includeComputedStyles:
+          type: boolean
+          description: Use computed styles vs original styles
+        viewport:
+          type: object
+          properties:
+            width:
+              type: integer
+              minimum: 320
+              maximum: 3840
+              default: 1920
+            height:
+              type: integer
+              minimum: 240
+              maximum: 2160
+              default: 1080
+
+    ExtractComponentResponse:
+      type: object
+      required:
+        - success
+        - componentName
+        - code
+        - styles
+      properties:
+        success:
+          type: boolean
+          description: Whether extraction was successful
+        componentName:
+          type: string
+          pattern: '^[A-Z][a-zA-Z0-9]*$'
+          description: Generated component name
+          example: "PricingTable"
+        code:
+          type: string
+          description: Complete component code
+        styles:
+          type: object
+          required:
+            - type
+            - content
+          properties:
+            type:
+              type: string
+              enum: [css, scss, css-in-js]
+            content:
+              type: string
+              description: Style definitions
+            className:
+              type: string
+              description: Root CSS class name
+        imports:
+          type: array
+          items:
+            type: string
+          description: Required import statements
+        usage:
+          type: object
+          properties:
+            import:
+              type: string
+              description: How to import the component
+            example:
+              type: string
+              description: Example usage code
+        dependencies:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              version:
+                type: string
+          description: Required npm packages
+        warnings:
+          type: array
+          items:
+            type: string
+          description: Non-fatal issues encountered
+        matches:
+          type: array
+          items:
+            type: object
+            properties:
+              selector:
+                type: string
+              confidence:
+                type: number
+                minimum: 0
+                maximum: 1
+              description:
+                type: string
+          description: Multiple matches found (if applicable)
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              enum:
+                - INVALID_URL
+                - AUTH_REQUIRED
+                - COMPONENT_NOT_FOUND
+                - TIMEOUT
+                - AI_ANALYSIS_FAILED
+                - UNSUPPORTED_FRAMEWORK
+                - RATE_LIMIT_EXCEEDED
+            message:
+              type: string
+              description: Human-readable error message
+            details:
+              type: object
+              description: Additional error context
+            suggestion:
+              type: string
+              description: Recommended recovery action
+
+# MCP-specific metadata
+x-mcp:
+  tool:
+    name: extractComponent
+    description: Extract and recreate webpage components as React or Vue code
+    parameters:
+      type: object
+      required:
+        - url
+        - identifier
+        - framework
+    examples:
+      - name: Extract navigation by selector
+        params:
+          url: "https://example.com"
+          identifier:
+            type: selector
+            value: "nav.main-nav"
+          framework: react
+          styling: css
+      - name: Extract pricing table semantically
+        params:
+          url: "https://example.com/pricing"
+          identifier:
+            type: semantic
+            value: "pricing table with three tiers"
+          framework: vue
+          styling: scss

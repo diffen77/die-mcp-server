@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  ollama:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.ollama
+    container_name: ollama
+    volumes:
+      - ollama-data:/root/.ollama
+    ports:
+      - "11434:11434"
+    networks:
+      - die-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+
+  die-server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.die
+    container_name: die-server
+    depends_on:
+      - ollama
+    environment:
+      - NODE_ENV=production
+      - OLLAMA_HOST=http://ollama:11434
+      - PORT=3000
+      - CACHE_MAX_SIZE=1073741824
+      - CACHE_MAX_ENTRIES=100
+      - MAX_CONCURRENT_ANALYSES=3
+      - RATE_LIMIT_PER_MINUTE=10
+      - ANALYSIS_TIMEOUT_MS=30000
+    volumes:
+      - die-cache:/app/cache
+      - die-logs:/app/logs
+    ports:
+      - "3000:3000"
+    networks:
+      - die-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+
+volumes:
+  ollama-data:
+    driver: local
+  die-cache:
+    driver: local
+  die-logs:
+    driver: local
+
+networks:
+  die-network:
+    driver: bridge

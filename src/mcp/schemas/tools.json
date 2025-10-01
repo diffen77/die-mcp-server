@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "MCP Tool Schemas",
+  "description": "Tool schemas for DIE MCP server",
+  "tools": [
+    {
+      "name": "analyzeWebpage",
+      "description": "Analyzes a complete webpage and generates production-ready component code",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https?://",
+            "description": "The webpage URL to analyze",
+            "examples": ["https://example.com", "https://stripe.com"]
+          },
+          "framework": {
+            "type": "string",
+            "enum": ["react", "angular", "vue", "svelte"],
+            "description": "Target framework for generated component"
+          },
+          "styling": {
+            "type": "string",
+            "enum": ["tailwind", "css", "scss", "styled-components"],
+            "description": "Styling approach for the component"
+          },
+          "options": {
+            "type": "object",
+            "properties": {
+              "typescript": {
+                "type": "boolean",
+                "default": true,
+                "description": "Include TypeScript type definitions"
+              },
+              "responsive": {
+                "type": "boolean",
+                "default": true,
+                "description": "Generate mobile-first responsive design"
+              },
+              "accessibility": {
+                "type": "boolean",
+                "default": true,
+                "description": "Include ARIA labels and semantic HTML"
+              }
+            }
+          }
+        },
+        "required": ["url", "framework", "styling"],
+        "additionalProperties": false
+      }
+    }
+  ]
+}

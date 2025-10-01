@@ -1,0 +1,278 @@
+openapi: 3.0.3
+info:
+  title: DIE MCP Server API
+  description: Design Intelligence Engine - Webpage to Component Analyzer
+  version: 1.0.0
+  contact:
+    name: DIE Development Team
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+  - url: http://die-server:3000
+    description: Docker container
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      operationId: getHealth
+      tags:
+        - Monitoring
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          description: Server is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+
+  /health/ollama:
+    get:
+      summary: Ollama service health check
+      operationId: getOllamaHealth
+      tags:
+        - Monitoring
+      responses:
+        '200':
+          description: Ollama is available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceHealth'
+        '503':
+          description: Ollama is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceHealth'
+
+  /health/models:
+    get:
+      summary: AI model status check
+      operationId: getModelsHealth
+      tags:
+        - Monitoring
+      responses:
+        '200':
+          description: Models are loaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelsHealth'
+        '503':
+          description: Models not available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelsHealth'
+
+  /sse:
+    get:
+      summary: MCP Server-Sent Events endpoint
+      operationId: mcpSSE
+      tags:
+        - MCP
+      parameters:
+        - name: client_id
+          in: query
+          schema:
+            type: string
+          description: Client identifier for connection tracking
+      responses:
+        '200':
+          description: SSE stream established
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: Server-sent events stream
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /cache/stats:
+    get:
+      summary: Cache statistics
+      operationId: getCacheStats
+      tags:
+        - Monitoring
+      responses:
+        '200':
+          description: Cache statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CacheStats'
+
+  /cache/clear:
+    post:
+      summary: Clear cache
+      operationId: clearCache
+      tags:
+        - Administration
+      security:
+        - ApiKey: []
+      responses:
+        '200':
+          description: Cache cleared
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  clearedEntries:
+                    type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      required:
+        - status
+        - timestamp
+        - uptime
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+        uptime:
+          type: integer
+          description: Uptime in seconds
+        version:
+          type: string
+        checks:
+          type: object
+          additionalProperties:
+            type: boolean
+
+    ServiceHealth:
+      type: object
+      required:
+        - service
+        - available
+        - timestamp
+      properties:
+        service:
+          type: string
+        available:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        lastError:
+          type: string
+        responseTime:
+          type: integer
+          description: Response time in milliseconds
+
+    ModelsHealth:
+      type: object
+      required:
+        - models
+        - timestamp
+      properties:
+        models:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              loaded:
+                type: boolean
+              size:
+                type: integer
+                description: Model size in bytes
+              version:
+                type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    CacheStats:
+      type: object
+      required:
+        - entries
+        - size
+        - hitRate
+        - maxSize
+      properties:
+        entries:
+          type: integer
+          description: Number of cached entries
+        size:
+          type: integer
+          description: Total cache size in bytes
+        maxSize:
+          type: integer
+          description: Maximum cache size in bytes
+        hitRate:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Cache hit rate (0-1)
+        evictions:
+          type: integer
+          description: Number of evictions since start
+        oldestEntry:
+          type: string
+          format: date-time
+        newestEntry:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+            suggestion:
+              type: string
+            timestamp:
+              type: string
+              format: date-time
+            requestId:
+              type: string
+
+  securitySchemes:
+    ApiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: Admin API key for privileged operations
